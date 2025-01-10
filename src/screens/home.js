@@ -90,8 +90,8 @@ export default function Home() {
     );
 
     useEffect(() => {
-        status();
         setAwaitToken(false);
+        KW();
     }, [device])
 
 
@@ -102,58 +102,8 @@ export default function Home() {
             setDevice(objeto);
         }
 
-    }
+    
 
-    const status = async () => {
-
-        const dataDevice = [device.livingRoom, device.cozinha, device.Bedroom, device.escritorio];
-
-        for (let i = 0; dataDevice.length > i; i++) {
-            verifiqueStatus(dataDevice[i], i);
-            console.log(dataDevice[i]);
-        }
-
-    }
-
-    const verifiqueStatus = async (value, i) => {
-        try {
-            const response = await fetch(`http://${value}`, {
-                method: 'GET',
-            });
-            if (!response.ok) {
-                throw new Error('Network response was not ok');
-            }
-
-            if (i == 0) {
-                setStatusSala('green');
-            }
-            if (i == 1) {
-                setStatusCozinha('green')
-            }
-            if (i == 2) {
-                setStatusQuarto('green');
-            }
-            if (i == 3) {
-                setStatusEscritorio('green');
-            }
-
-
-        } catch (error) {
-
-            if (i == 0) {
-                setStatusSala('red');
-            }
-            if (i == 1) {
-                setStatusCozinha('red')
-            }
-            if (i == 2) {
-                setStatusQuarto('red');
-            }
-            if (i == 3) {
-                setStatusEscritorio('red');
-            }
-
-        }
     }
 
     const headers = async = (param) => {
@@ -492,21 +442,21 @@ export default function Home() {
                     <Image source={require('../assets/4.png')} className="absolute" style={styles.backgroundImage} />
                     <View style={styles.containerGeneration}>
                         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: wp(1) }}>
-                            <Text numberOfLines={1} allowFontScaling={false} style={{ fontSize: wp(4), color: 'white' }}>Hoje</Text>
-                            <Text numberOfLines={1} allowFontScaling={false} style={{ fontSize: wp(5), fontWeight: 'bold', color: 'white' }}><Text numberOfLines={1} allowFontScaling={false} style={{ fontSize: wp(3), color: 'white' }}>kwh: </Text>{valueGeneration.today.toFixed(2)}</Text>
-                            <Text numberOfLines={1} allowFontScaling={false} style={{ fontSize: wp(3), fontWeight: 'bold', color: 'white' }}>{formatCurrency(valueGeneration.today * device.tarifa)}</Text>
+                            <Text numberOfLines={0} allowFontScaling={false} style={{ fontSize: wp(4), color: 'white' }}>Hoje</Text>
+                            <Text numberOfLines={0} allowFontScaling={false} style={{ fontSize: wp(5), fontWeight: 'bold', color: 'white' }}><Text numberOfLines={1} allowFontScaling={false} style={{ fontSize: wp(3), color: 'white' }}>kwh: </Text>{valueGeneration.today.toFixed(2)}</Text>
+                            <Text numberOfLines={0} allowFontScaling={false} style={{ fontSize: wp(3), fontWeight: 'bold', color: 'white' }}>{formatCurrency(valueGeneration.today * device.tarifa)}</Text>
 
                         </View>
                         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: wp(1), borderTopWidth: 1, borderBottomWidth: 1, borderColor: 'gray' }}>
-                            <Text numberOfLines={1} allowFontScaling={false} style={{ fontSize: wp(4), color: 'white' }}>Mês</Text>
-                            <Text numberOfLines={1} allowFontScaling={false} style={{ fontSize: wp(5), fontWeight: 'bold', color: 'white' }}><Text numberOfLines={1} allowFontScaling={false} style={{ fontSize: wp(3), color: 'white' }}>kwh: </Text>{valueGeneration.month.toFixed(2)}</Text>
-                            <Text numberOfLines={1} allowFontScaling={false} style={{ fontSize: wp(3), fontWeight: 'bold', color: 'white' }}>{formatCurrency(valueGeneration.month * device.tarifa)}</Text>
+                            <Text numberOfLines={0} allowFontScaling={false} style={{ fontSize: wp(4), color: 'white' }}>Mês</Text>
+                            <Text numberOfLines={0} allowFontScaling={false} style={{ fontSize: wp(5), fontWeight: 'bold', color: 'white' }}><Text numberOfLines={1} allowFontScaling={false} style={{ fontSize: wp(3), color: 'white' }}>kwh: </Text>{valueGeneration.month.toFixed(2)}</Text>
+                            <Text numberOfLines={0} allowFontScaling={false} style={{ fontSize: wp(3), fontWeight: 'bold', color: 'white' }}>{formatCurrency(valueGeneration.month * device.tarifa)}</Text>
 
                         </View>
                         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: wp(1) }}>
-                            <Text numberOfLines={1} allowFontScaling={false} style={{ fontSize: wp(4), color: 'white' }}>Acumulado</Text>
-                            <Text numberOfLines={1} allowFontScaling={false} style={{ fontSize: wp(5), fontWeight: 'bold', color: 'white' }}><Text numberOfLines={1} allowFontScaling={false} style={{ fontSize: wp(3), color: 'white' }}>kwh: </Text>{valueGeneration.cumulative.toFixed(2)}</Text>
-                            <Text numberOfLines={1} allowFontScaling={false} style={{ fontSize: wp(3), fontWeight: 'bold', color: 'white' }}>{formatCurrency(valueGeneration.cumulative * device.tarifa)}</Text>
+                            <Text numberOfLines={0} allowFontScaling={false} style={{ fontSize: wp(4), color: 'white' }}>Acumulado</Text>
+                            <Text numberOfLines={0} allowFontScaling={false} style={{ fontSize: wp(4), fontWeight: 'bold', color: 'white' }}><Text numberOfLines={1} allowFontScaling={false} style={{ fontSize: wp(3), color: 'white' }}>kwh: </Text>{valueGeneration.cumulative.toFixed(2)}</Text>
+                            <Text numberOfLines={0} allowFontScaling={false} style={{ fontSize: wp(3), fontWeight: 'bold', color: 'white' }}>{formatCurrency(valueGeneration.cumulative * device.tarifa)}</Text>
                         </View>
                     </View>
 

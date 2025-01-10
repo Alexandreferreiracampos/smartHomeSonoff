@@ -5,6 +5,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import led from '../assets/led.png';
 import lustre from '../assets/lustre.png';
 import { widthPercentageToDP as wp, heightPercentageToDP as hp } from 'react-native-responsive-screen';
+import Slider from '@react-native-community/slider';
 
 import * as Animatable from 'react-native-animatable';
 
@@ -18,13 +19,15 @@ export default function Group({ route }) {
     const [modalVisible, setModalVisible] = useState(false);
     const [valueRequest, setReguest] = useState('#39d76c');
 
-    useEffect(()=>{
+    useEffect(() => {
         loadDevices();
-    },[])
+    }, [])
 
     const command = async (valor) => {
-        console.log(`http://${valor}`)
-        let url = 'http://'+valor
+
+        console.log(valor)
+
+        let url = 'http://' + valor
         let req = new XMLHttpRequest();
 
         req.onreadystatechange = () => {
@@ -70,48 +73,63 @@ export default function Group({ route }) {
     };
 
     const deleDevice = async (value, valueIp) => {
-            
-            Alert.alert(
-                'Excluir Dispositivo',
-                'Deseja mesmo excluir este dispositivo?',
-                [
-                    { text: 'Cancelar', onPress: () => console.log('Cancelado'), style: 'cancel' },
-                    { text: 'Confirmar', onPress: () => deleteGroupStorage(value, valueIp) },
-                ],
-                { cancelable: false }
-            );
-    
-        }
 
-        const deleteGroupStorage = async (value, valueip) => {
+        Alert.alert(
+            'Excluir Dispositivo',
+            'Deseja mesmo excluir este dispositivo?',
+            [
+                { text: 'Cancelar', onPress: () => console.log('Cancelado'), style: 'cancel' },
+                { text: 'Confirmar', onPress: () => deleteGroupStorage(value, valueIp) },
+            ],
+            { cancelable: false }
+        );
 
-            try {
-                // Carrega os grupos existentes
-                const existingDevice = (await loadDevices()) || [];
-    
-                console.log(existingDevice)
-    
-                // Garante que existingDevice é sempre um array
-                if (!Array.isArray(existingDevice)) {
-                    throw new Error('Grupos existentes não são um array válido.');
-                }
-    
-                // Filtra os grupos, removendo aquele que tem o nome correspondente
-                const updatedDevice = existingDevice.filter(group => group.ip !== valueip || group.nomeDevice !== value);
-                console.log(updatedDevice);
-    
-                // Salva os grupos atualizados no AsyncStorage
-                await AsyncStorage.setItem('Device1', JSON.stringify(updatedDevice));
-    
-                loadDevices();
-    
-                //console.log(`Grupo "${value}" foi removido com sucesso.`);
-                console.log("Grupos atualizados:", updatedDevice);
-    
-            } catch (error) {
-                console.log("Erro ao excluir o grupo", error);
+    }
+
+    const deleteGroupStorage = async (value, valueip) => {
+
+        try {
+            // Carrega os grupos existentes
+            const existingDevice = (await loadDevices()) || [];
+
+            console.log(existingDevice)
+
+            // Garante que existingDevice é sempre um array
+            if (!Array.isArray(existingDevice)) {
+                throw new Error('Grupos existentes não são um array válido.');
             }
+
+            // Filtra os grupos, removendo aquele que tem o nome correspondente
+            const updatedDevice = existingDevice.filter(group => group.ip !== valueip || group.nomeDevice !== value);
+            console.log(updatedDevice);
+
+            // Salva os grupos atualizados no AsyncStorage
+            await AsyncStorage.setItem('Device1', JSON.stringify(updatedDevice));
+
+            loadDevices();
+
+            //console.log(`Grupo "${value}" foi removido com sucesso.`);
+            console.log("Grupos atualizados:", updatedDevice);
+
+        } catch (error) {
+            console.log("Erro ao excluir o grupo", error);
         }
+    }
+
+    const [brilho, SetBrilho] = useState(0);
+
+    const command1 = (value) => {
+
+        if (value != brilho) {
+            SetBrilho(value);
+            let url = `http://${value}`
+            let req = new XMLHttpRequest();
+            req.open('GET', url)
+            req.send()
+            console.log(url)
+        }
+
+    }
 
     return (
         <View style={styles.container}>
@@ -139,9 +157,10 @@ export default function Group({ route }) {
                                     ico={button.ico.image}
                                     width={wp(20)}
                                     height={wp(20)}
+                                    sliderStatus={button.slider}
+                                    ip={button.ip}
                                     onLongPress={() => deleDevice(button.nomeDevice, button.ip)}
                                     onPress={() => command(`${button.ip}/${button.comando}`)} />
-
 
                             ))}
                         </View>
@@ -155,6 +174,8 @@ export default function Group({ route }) {
                                     ico={button.ico.image}
                                     width={wp(20)}
                                     height={wp(20)}
+                                    sliderStatus={button.slider}
+                                    ip={button.ip}
                                     onLongPress={() => deleDevice(button.nomeDevice, button.ip)}
                                     onPress={() => command(`${button.ip}/${button.comando}`)} />
 
@@ -167,9 +188,38 @@ export default function Group({ route }) {
 
                     </View>
 
+                    <View style={{ width: "100%", height: 29, justifyContent: 'center' }}>
+                    
+                                        <Slider
+                                            minimumValue={0}
+                                            maximumValue={10}
+                                            minimumTrackTintColor='rgb(47,93,180)'
+                                            maximumTrackTintColor='#cdcdcd'
+                                            thumbTintColor='rgb(47,93,180)'
+                                            //onSlidingStart={RGB1(corRgb)}
+                                            onValueChange={(valor) => command1(`192.168.0.100/${valor.toFixed()}`)}
+                                            value={brilho}
+                                        />
+                    
+                                    </View>
+
                 </ScrollView>
 
             </View>
+            <TouchableOpacity
+                onPress={() => setModalVisible(true)}
+                style={{ width: wp(15), height: wp(15), backgroundColor: 'rgb(47,93,180)', borderRadius: 100, position: 'absolute', bottom: wp(8), right: wp(8), justifyContent: 'center', alignItems: 'center' }}>
+                <Text
+                    numberOfLines={1} allowFontScaling={false}
+                    style={{ fontSize: wp(8), fontWeight: 'bold', color: 'white' }}
+                >
+                    +
+                </Text>
+
+                
+
+            </TouchableOpacity>
+                   
 
         </View>
     );

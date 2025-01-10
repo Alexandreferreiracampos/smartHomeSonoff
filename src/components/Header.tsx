@@ -41,7 +41,7 @@ export default function Header({ title, status,statusModal,comandos, ...rest }: 
             <Animatable.Text animation="slideInLeft"  style={styles.title}>{title}</Animatable.Text>
             <TouchableOpacity style={{ width: 30, height: 25}} onPress={()=>statusModal(true)}>
                 <Animatable.Text numberOfLines={1} allowFontScaling={false} animation="slideInRight" delay={500} style={{ width: 40, height: 30}}>
-                    <AntDesign name="pluscircleo" size={24} color={status} />
+                <AntDesign name="wifi" size={24} color={status} />
                     </Animatable.Text>
             </TouchableOpacity>
             

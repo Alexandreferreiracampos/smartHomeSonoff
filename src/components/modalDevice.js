@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Text, StyleSheet, TouchableOpacity, View, Modal, ScrollView, TextInput, FlatList, Image, Alert } from 'react-native'
 import { Calendar, LocaleConfig } from 'react-native-calendars';
 import { widthPercentageToDP as wp, heightPercentageToDP as hp, listenOrientationChange } from 'react-native-responsive-screen';
+import Checkbox from 'expo-checkbox';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Portao from '../assets/gate.png';
 import Quarto from '../assets/Bedroom1.png';
@@ -29,6 +30,8 @@ export default function ModalDevice({ status, group, closed, ...rest }) {
     const [buttonAll, setButtonAll] = useState([]);
     const [modalVisible, setModalVisible] = useState(false);
     const [selectedIcon, setSelectedIcon] = useState(Lampada);
+    const [isCheckedButton, setCheckedButton] = useState(true);
+    const [isCheckedSlide, setCheckedSlide] = useState(false);
 
     const icons = [
         { name: 'Pendentes', image: Pendente },
@@ -57,36 +60,37 @@ export default function ModalDevice({ status, group, closed, ...rest }) {
 
 
     const saveDevice = async (newDevice) => {
-       if(valueName !='' && selectedIcon !='' && valueIP !='' && valueComando !=''){
-        setValueComando('');
-        setValueName('');
-        setValueIP('');
-        setSelectedIcon('');
-        try {
-            // Carrega os grupos existentes ou inicializa como um array vazio
-            const existingDevice = (await loadDevices()) || [];
-    
-            // Garante que existingGroups é sempre um array
-            if (!Array.isArray(existingDevice)) {
-                throw new Error('Grupos existentes não são um array válido.');
-            }
-    
-            // Adiciona o novo device à lista
-            const updatedDevice = [...existingDevice, newDevice];
-    
-            // Salva os grupos atualizados no AsyncStorage
-            await AsyncStorage.setItem('Device1', JSON.stringify(updatedDevice));
+        if (valueName != '' && selectedIcon != '' && valueIP != '' && valueComando != '') {
+            setValueComando('');
+            setValueName('');
+            setValueIP('');
+            setSelectedIcon('');
+            setCheckedSlide(false);
+            try {
+                // Carrega os grupos existentes ou inicializa como um array vazio
+                const existingDevice = (await loadDevices()) || [];
 
-            closed()
-    
-            console.log("Device salvo:", updatedDevice);
-    
-        } catch (error) {
-            console.log("Erro ao salvar os botões", error);
+                // Garante que existingGroups é sempre um array
+                if (!Array.isArray(existingDevice)) {
+                    throw new Error('Grupos existentes não são um array válido.');
+                }
+
+                // Adiciona o novo device à lista
+                const updatedDevice = [...existingDevice, newDevice];
+
+                // Salva os grupos atualizados no AsyncStorage
+                await AsyncStorage.setItem('Device1', JSON.stringify(updatedDevice));
+
+                closed()
+
+                console.log("Device salvo:", updatedDevice);
+
+            } catch (error) {
+                console.log("Erro ao salvar os botões", error);
+            }
+        } else {
+            Alert.alert('Preencha todos os campos para salvar o dispositivo.')
         }
-       }else{
-        Alert.alert('Preencha todos os campos para salvar o dispositivo.')
-       }
     };
 
     const loadDevices = async () => {
@@ -94,7 +98,7 @@ export default function ModalDevice({ status, group, closed, ...rest }) {
             const dataDevice = await AsyncStorage.getItem('Device1');
             if (dataDevice !== null) {
                 // Retorna os grupos como um array de objetos
-                
+
                 return JSON.parse(dataDevice);
             }
             return []; // Retorna um array vazio se não houver grupos salvos
@@ -103,6 +107,20 @@ export default function ModalDevice({ status, group, closed, ...rest }) {
             return []; // Retorna um array vazio em caso de erro
         }
     };
+
+    const checkbox = (value) => {
+
+        if (value == 'button') {
+
+            setCheckedButton(true);
+            setCheckedSlide(false);
+
+        } else {
+            setCheckedButton(false);
+            setCheckedSlide(true);
+        }
+
+    }
 
     return (
         <Modal
@@ -202,10 +220,33 @@ export default function ModalDevice({ status, group, closed, ...rest }) {
 
                         />
 
+                        <View style={{ width: '100%', paddingBottom: 2 }}><Text numberOfLines={1} allowFontScaling={false} style={{ fontWeight: 'bold', color: 'grey' }}>Tipo do Botão</Text></View>
+                        <View style={{ flexDirection: 'row', width: '100%', marginBottom: 10 }}>
+                            <View style={{ flex: 2, alignItems: 'center' }}>
+                                <Checkbox
+                                    style={{ margin: 8, }}
+                                    value={isCheckedButton}
+                                    onValueChange={() => checkbox('button')}
+                                    color={isCheckedButton ? '#4630EB' : undefined}
+                                /><Text>Botão</Text>
 
-                        <View style={{ width: '100%', justifyContent: 'space-between', flexDirection: 'row', paddingLeft:50, paddingRight:50}}>
+                            </View>
+                            <View style={{ flex: 2, alignItems: 'center' }}>
+                                <Checkbox
+                                    style={{ margin: 8, }}
+                                    value={isCheckedSlide}
+                                    onValueChange={() => checkbox('slider')}
+                                    color={isCheckedSlide ? '#4630EB' : undefined}
+                                /><Text>Slider</Text>
+                            </View>
 
-                            <TouchableOpacity onPress={() => saveDevice({nomeDevice:valueName, ico:selectedIcon, ip:valueIP, comando:valueComando, grupo:group})} style={styles.button}>
+                        </View>
+
+
+
+                        <View style={{ width: '100%', justifyContent: 'space-between', flexDirection: 'row', paddingLeft: 50, paddingRight: 50 }}>
+
+                            <TouchableOpacity onPress={() => saveDevice({ nomeDevice: valueName, ico: selectedIcon, ip: valueIP, comando: valueComando, grupo: group, slider:isCheckedSlide })} style={styles.button}>
                                 <Text
                                     numberOfLines={1}
                                     allowFontScaling={false}
@@ -219,7 +260,6 @@ export default function ModalDevice({ status, group, closed, ...rest }) {
                                 >Fechar</Text></TouchableOpacity>
 
                         </View>
-
 
 
                     </ScrollView>

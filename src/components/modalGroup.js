@@ -180,7 +180,7 @@ export default function ModalGroup({ status, onDayPress, onMonthChange, closed, 
                             <Image source={selectedIcon.image} style={{ width: 29, height: 29 }} />
                         </TouchableOpacity>
 
-                        <View style={{ width: '100%', justifyContent: 'space-between', flexDirection: 'row', paddingLeft:50, paddingRight:50}}>
+                        <View style={{ width: '100%', flex:1, flexDirection: 'row'}}>
 
                             <TouchableOpacity onPress={() => saveGroup({nomeGrupo:valueName, ico:selectedIcon})} style={styles.button}>
                                 <Text
@@ -247,24 +247,19 @@ const styles = StyleSheet.create({
 
     },
     button: {
-        width: '40%',
-        height: 40,
+        flex:2,
+        margin:10,
+        height: 60,
         justifyContent: 'center',
         alignItems: 'center',
         backgroundColor: 'rgb(12, 116, 235)',
-        borderRadius: 10,
-        margin: 10
+        borderRadius: 10
     },
     container: {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
         padding: 16,
-    },
-    button: {
-        backgroundColor: 'blue',
-        padding: 16,
-        borderRadius: 8,
     },
     buttonText: {
         color: 'white',
@@ -302,7 +297,7 @@ const styles = StyleSheet.create({
     },
     closeButton: {
         marginTop: 16,
-        backgroundColor: 'red',
+        backgroundColor: 'rgb(12, 116, 235)',
         padding: 12,
         borderRadius: 8,
         alignItems: 'center',
