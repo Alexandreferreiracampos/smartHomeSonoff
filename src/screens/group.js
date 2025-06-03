@@ -188,21 +188,6 @@ export default function Group({ route }) {
 
                     </View>
 
-                    <View style={{ width: "100%", height: 29, justifyContent: 'center' }}>
-                    
-                                        <Slider
-                                            minimumValue={0}
-                                            maximumValue={10}
-                                            minimumTrackTintColor='rgb(47,93,180)'
-                                            maximumTrackTintColor='#cdcdcd'
-                                            thumbTintColor='rgb(47,93,180)'
-                                            //onSlidingStart={RGB1(corRgb)}
-                                            onValueChange={(valor) => command1(`192.168.0.100/${valor.toFixed()}`)}
-                                            value={brilho}
-                                        />
-                    
-                                    </View>
-
                 </ScrollView>
 
             </View>
