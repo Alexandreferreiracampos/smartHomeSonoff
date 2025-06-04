@@ -163,6 +163,7 @@ export default function Group({ route }) {
                                     onPress={() => command(`${button.ip}/${button.comando}`)} />
 
                             ))}
+                            
                         </View>
                         <View style={styles.row}>
                             {buttonsRight.map((button, index) => (

@@ -323,7 +323,7 @@ export default function TasmotaSubDeviceConfigModal({ visible, onClose, selected
 }
 
 // Componente Auxiliar para o Grupo de Inputs de cada Sub-Device
-const SubDeviceInputGroup = ({ output, onInputChange, onCheckboxChange, onIconPress }) => {
+const SubDeviceInputGroup2 = ({ output, onInputChange, onCheckboxChange, onIconPress }) => {
     // console.log(`[SubDeviceInputGroup] Renderizando para output index: ${output.index}`);
     return (
         <View style={styles.subDeviceGroup}>
@@ -371,202 +371,293 @@ const SubDeviceInputGroup = ({ output, onInputChange, onCheckboxChange, onIconPr
     );
 };
 
+const SubDeviceInputGroup = ({ output, onOutputChange, onCheckboxChange }) => (
+    <View style={styles.subDeviceGroup}>
+        <Text style={styles.subDeviceTitle}>Power {output.index}</Text>
+        <View style={styles.inputRow}>
+            <Text style={styles.inputLabel}>Nome:</Text>
+            <TextInput
+                style={styles.textInput}
+                value={output.name}
+                onChangeText={(value) => onOutputChange(output.index, 'name', value)}
+                placeholder={`Nome para Power ${output.index}`}
+            />
+        </View>
+        <View style={styles.inputRow}>
+            <Text style={styles.inputLabel}>Comando:</Text>
+            <TextInput
+                style={styles.textInput}
+                value={output.command}
+                onChangeText={(value) => onOutputChange(output.index, 'command', value)}
+                placeholder={`Comando para Power ${output.index}`}
+            />
+        </View>
+        <View style={styles.inputRow}>
+            <Text style={styles.inputLabel}>Tipo de Controle:</Text>
+            <View style={styles.controlTypeContainer}>
+                <TouchableOpacity
+                    style={[
+                        styles.controlTypeOption,
+                        !output.isSlider && styles.controlTypeOptionSelected
+                    ]}
+                    onPress={() => onCheckboxChange(output.index, 'button')}
+                >
+                    <Text style={styles.controlTypeText}>Botão</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                    style={[
+                        styles.controlTypeOption,
+                        output.isSlider && styles.controlTypeOptionSelected
+                    ]}
+                    onPress={() => onCheckboxChange(output.index, 'slider')}
+                >
+                    <Text style={styles.controlTypeText}>Slider</Text>
+                </TouchableOpacity>
+            </View>
+        </View>
+        <View style={styles.inputRow}>
+        <Text style={styles.label}>Ícone</Text>
+            <TouchableOpacity
+                style={[styles.inputText, styles.iconPickerButton]}
+                onPress={() => onIconPress(output.index)}
+            >
+                <Text style={styles.iconPickerText}>Escolher Ícone</Text>
+                {output.icon?.image && <Image source={output.icon.image} style={styles.selectedIconImage} />}
+            </TouchableOpacity>
+            </View>
+
+    </View>
+);
+
 // --- Estilos --- (Mantidos como no arquivo anterior)
 const styles = StyleSheet.create({
     outerView: {
         flex: 1,
-        alignItems: 'center',
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
         justifyContent: 'center',
-        backgroundColor: 'rgba(0,0,0,0.7)',
+        alignItems: 'center',
     },
     modalContainer: {
-        width: '90%',
-        maxHeight: '90%',
-        backgroundColor: 'white',
-        borderRadius: 15,
+        width: wp('90%'),
+        maxHeight: hp('80%'),
+        backgroundColor: '#fff',
+        borderRadius: 10,
         overflow: 'hidden',
-        elevation: 10,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.25,
-        shadowRadius: 4,
     },
     modalHeader: {
-        paddingVertical: hp(1.8),
-        paddingHorizontal: wp(4),
-        borderBottomWidth: 1,
-        borderBottomColor: '#eee',
-        backgroundColor: '#f8f8f8',
-        alignItems: 'center',
+        padding: 15,
+        backgroundColor: '#007AFF',
+        borderTopLeftRadius: 10,
+        borderTopRightRadius: 10,
     },
     modalTitle: {
+        fontSize: 18,
         fontWeight: 'bold',
-        fontSize: wp(5.5),
-        color: '#333',
-        textAlign: 'center',
+        color: '#fff',
     },
     modalSubtitle: {
-        fontSize: wp(4),
-        color: '#666',
-        marginTop: hp(0.5),
+        fontSize: 14,
+        color: '#e0e0e0',
+        marginTop: 5,
     },
     formScrollView: {
-        padding: wp(4),
+        padding: 15,
     },
-    loadingContainer: {
-        flex: 1,
-        justifyContent: 'center',
+    primaryDeviceSection: {
+        marginBottom: 20,
+    },
+    powerOutputsSection: {
+        marginBottom: 20,
+    },
+    sectionTitle: {
+        fontSize: 16,
+        fontWeight: 'bold',
+        marginBottom: 10,
+        color: '#333',
+    },
+    inputRow: {
+        flexDirection: 'row',
         alignItems: 'center',
-        padding: wp(5),
-        minHeight: hp(30), // Garante altura mínima
+        marginBottom: 10,
     },
-    loadingText: {
-        marginTop: hp(2),
-        fontSize: wp(4),
+    inputLabel: {
+        width: wp('25%'),
+        fontSize: 14,
         color: '#555',
     },
-    errorContainer: {
-        padding: wp(4),
-        alignItems: 'center',
+    textInput: {
+        flex: 1,
+        height: 40,
+        borderWidth: 1,
+        borderColor: '#ccc',
+        borderRadius: 5,
+        paddingHorizontal: 10,
     },
-    errorText: {
-        color: 'red',
-        textAlign: 'center',
-        fontSize: wp(4),
-        marginBottom: hp(2),
+    iconSelector: {
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        height: 40,
+        borderWidth: 1,
+        borderColor: '#ccc',
+        borderRadius: 5,
+        paddingHorizontal: 10,
+    },
+    selectedIcon: {
+        width: 24,
+        height: 24,
+        marginRight: 10,
+    },
+    iconSelectorText: {
+        color: '#555',
     },
     subDeviceGroup: {
-         backgroundColor: '#f9f9f9',
+        backgroundColor: '#f9f9f9',
         padding: 10,
         borderRadius: 5,
         marginBottom: 10,
     },
     subDeviceTitle: {
-        fontSize: wp(4.5),
+        fontSize: 14,
         fontWeight: 'bold',
-        marginBottom: hp(1.5),
-        color: '#007AFF',
-    },
-    label: {
-        fontWeight: '600',
+        marginBottom: 10,
         color: '#444',
-        marginBottom: hp(0.8),
-        fontSize: wp(4),
     },
-    inputText: {
-        width: '100%',
-        height: hp(6.5),
-        backgroundColor: '#fff',
-        borderRadius: 8,
-        paddingHorizontal: wp(3),
-        marginBottom: hp(2),
-        fontSize: wp(4),
-        borderWidth: 1,
-        borderColor: '#ccc',
-    },
-    iconPickerButton: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        paddingHorizontal: wp(3),
-    },
-    iconPickerText: {
-        color: 'rgb(12, 116, 235)',
-        fontSize: wp(4),
-    },
-    selectedIconImage: {
-        width: wp(8),
-        height: wp(8),
-        resizeMode: 'contain',
-    },
-    checkboxContainer: {
-        flexDirection: 'row',
-        marginBottom: hp(1.5),
-        marginTop: hp(1),
-    },
-    checkboxOption: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginRight: wp(6),
-    },
-    checkboxLabel: {
-        marginLeft: wp(2),
-        fontSize: wp(4),
-        color: '#333',
-    },
-    actionButtonsContainer: {
+    controlTypeContainer: {
+        flex: 1,
         flexDirection: 'row',
         justifyContent: 'space-around',
-        paddingVertical: hp(1.5),
-        paddingHorizontal: wp(4),
+    },
+    controlTypeOption: {
+        flex: 1,
+        padding: 8,
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: '#ccc',
+        marginHorizontal: 5,
+        borderRadius: 5,
+    },
+    controlTypeOptionSelected: {
+        backgroundColor: '#007AFF',
+        borderColor: '#007AFF',
+    },
+    controlTypeText: {
+        fontSize: 14,
+        color: '#555',
+    },
+    modalFooter: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        padding: 15,
         borderTopWidth: 1,
         borderTopColor: '#eee',
-        backgroundColor: '#f8f8f8',
     },
-    buttonBase: {
-        paddingVertical: hp(1.5),
-        paddingHorizontal: wp(3),
-        borderRadius: 8,
-        alignItems: 'center',
-        justifyContent: 'center',
-        flex: 1,
-        marginHorizontal: wp(1.5),
+    cancelButton: {
+        paddingVertical: 10,
+        paddingHorizontal: 20,
+        borderRadius: 5,
+        backgroundColor: '#f2f2f2',
     },
-    buttonText: {
-        color: 'white',
+    cancelButtonText: {
+        color: '#555',
         fontWeight: 'bold',
-        fontSize: wp(4),
-        textAlign: 'center',
     },
     saveButton: {
-        backgroundColor: '#4CAF50',
+        paddingVertical: 10,
+        paddingHorizontal: 20,
+        borderRadius: 5,
+        backgroundColor: '#007AFF',
     },
-    closeButton: {
-        backgroundColor: '#f44336',
+    saveButtonText: {
+        color: '#fff',
+        fontWeight: 'bold',
     },
-    // Estilos do Modal de Ícones (mantidos)
     iconModalOverlay: {
         flex: 1,
-        backgroundColor: 'rgba(0, 0, 0, 0.6)',
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
         justifyContent: 'center',
         alignItems: 'center',
-        padding: wp(5),
     },
-    iconModalContent: {
-        backgroundColor: 'white',
-        width: '100%',
-        maxHeight: '80%',
-        padding: wp(4),
+    iconModalContainer: {
+        width: wp('80%'),
+        maxHeight: hp('70%'),
+        backgroundColor: '#fff',
         borderRadius: 10,
-        elevation: 5,
+        padding: 15,
     },
     iconModalTitle: {
-        fontSize: wp(5),
+        fontSize: 18,
         fontWeight: 'bold',
-        marginBottom: hp(2),
+        marginBottom: 15,
         textAlign: 'center',
-        color: '#333',
     },
-    iconListContainer: {
+    iconItem: {
+        width: wp('18%'),
+        aspectRatio: 1,
+        margin: 5,
         alignItems: 'center',
-        paddingBottom: hp(1),
-    },
-    iconItemContainer: {
-        padding: wp(2),
-        alignItems: 'center',
-        width: wp(28),
-        marginBottom: hp(1.5),
+        justifyContent: 'center',
     },
     iconImage: {
-        width: wp(12),
-        height: wp(12),
-        marginBottom: hp(0.5),
-        resizeMode: 'contain',
+        width: 40,
+        height: 40,
+        marginBottom: 5,
     },
     iconText: {
-        fontSize: wp(3.5),
+        fontSize: 12,
         textAlign: 'center',
+    },
+    closeIconModalButton: {
+        marginTop: 15,
+        padding: 10,
+        backgroundColor: '#f2f2f2',
+        borderRadius: 5,
+        alignItems: 'center',
+    },
+    closeIconModalButtonText: {
+        color: '#555',
+        fontWeight: 'bold',
+    },
+    loadingContainer: {
+        padding: 20,
+        alignItems: 'center',
+    },
+    loadingText: {
+        marginTop: 10,
+        color: '#555',
+    },
+    errorContainer: {
+        padding: 15,
+    },
+    errorText: {
+        color: '#d32f2f',
+        marginBottom: 15,
+    },
+    rgbInfoContainer: {
+        backgroundColor: '#f5f5f5',
+        padding: 10,
+        borderRadius: 5,
+        marginBottom: 15,
+    },
+    rgbInfoTitle: {
+        fontSize: 14,
+        fontWeight: 'bold',
+        marginBottom: 8,
+        color: '#333',
+    },
+    rgbInfoItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 5,
+    },
+    rgbIndicator: {
+        width: 12,
+        height: 12,
+        borderRadius: 6,
+        marginRight: 8,
+    },
+    rgbInfoText: {
+        fontSize: 13,
         color: '#555',
     },
 });
-
