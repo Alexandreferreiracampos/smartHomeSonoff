@@ -10,12 +10,16 @@ import {
     FlatList,
     Image,
     Alert,
-    ActivityIndicator
+    ActivityIndicator,
+    Platform // Import Platform
 } from 'react-native';
 import { widthPercentageToDP as wp, heightPercentageToDP as hp } from 'react-native-responsive-screen';
 import * as Network from 'expo-network';
 import Checkbox from 'expo-checkbox';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+
+// Import o novo modal
+import TasmotaSubDeviceConfigModal from './TasmotaSubDeviceConfigModal_Debug'; // Ajuste o caminho se necessário
 
 // Importações de Ícones (mantidas do seu código)
 import Portao from '../assets/gate.png';
@@ -53,23 +57,20 @@ const icons = [
     { name: 'Jardim', image: Planta },
 ];
 
-// Componente Principal
+// Componente Principal Modificado com Logs
 export default function ModalDevice({ status, group, closed, ...rest }) {
 
     // --- Estados --- 
-    // Formulário
     const [valueName, setValueName] = useState('');
     const [valueIP, setValueIP] = useState('');
     const [valueComando, setValueComando] = useState('?m=1&o=1');
-    const [selectedIcon, setSelectedIcon] = useState(icons.find(icon => icon.name === 'Lâmpada') || icons[0]); // Ícone padrão Lâmpada
+    const [selectedIcon, setSelectedIcon] = useState(icons.find(icon => icon.name === 'Lâmpada') || icons[0]);
     const [isCheckedButton, setCheckedButton] = useState(true);
     const [isCheckedSlide, setCheckedSlide] = useState(false);
-
-    // Modais Auxiliares
-    const [iconModalVisible, setIconModalVisible] = useState(false); // Modal de seleção de ícones
-    const [searchViewVisible, setSearchViewVisible] = useState(false); // Controla a visibilidade da UI de busca
-
-    // Scanner Tasmota
+    const [iconModalVisible, setIconModalVisible] = useState(false);
+    const [searchViewVisible, setSearchViewVisible] = useState(false);
+    const [subDeviceModalVisible, setSubDeviceModalVisible] = useState(false);
+    const [configuringIp, setConfiguringIp] = useState(null);
     const [localIp, setLocalIp] = useState(null);
     const [networkPrefix, setNetworkPrefix] = useState(null);
     const [isScanning, setIsScanning] = useState(false);
@@ -79,13 +80,11 @@ export default function ModalDevice({ status, group, closed, ...rest }) {
 
     // --- Funções --- 
 
-    // Seleção de Ícone
     const handleSelectIcon = (icon) => {
         setSelectedIcon(icon);
         setIconModalVisible(false);
     };
 
-    // Carregar Devices Salvos
     const loadDevices = async () => {
         try {
             const dataDevice = await AsyncStorage.getItem('Device1');
@@ -96,51 +95,72 @@ export default function ModalDevice({ status, group, closed, ...rest }) {
         }
     };
 
-    // Salvar Novo Device
     const saveDevice = async () => {
         const newDevice = {
-            nomeDevice: valueName.trim(), // Remove espaços extras
+            nomeDevice: valueName.trim(),
             ico: selectedIcon,
             ip: valueIP.trim(),
             comando: valueComando.trim(),
             grupo: group,
             slider: isCheckedSlide
         };
-
-        // Validação mais robusta
         if (!newDevice.nomeDevice || !newDevice.ico || !newDevice.ip || !newDevice.comando) {
             Alert.alert('Campos Obrigatórios', 'Por favor, preencha Nome, Ícone, IP e Comando.');
             return;
         }
-        // Validação simples de IP (pode ser melhorada com regex)
         if (!/^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/.test(newDevice.ip)) {
              Alert.alert('IP Inválido', 'Por favor, insira um endereço IP válido.');
              return;
         }
-
         try {
             const existingDevices = await loadDevices();
             const updatedDevices = [...existingDevices, newDevice];
             await AsyncStorage.setItem('Device1', JSON.stringify(updatedDevices));
-            console.log("Device salvo:", newDevice);
-
-            // Limpa o formulário
-            setValueName('');
-            setValueIP('');
-            setValueComando('?m=1&o=1');
-            setSelectedIcon(icons.find(icon => icon.name === 'Lâmpada') || icons[0]);
-            setCheckedButton(true);
-            setCheckedSlide(false);
-
-            closed(); // Fecha o modal principal
-
+            console.log("Device manual salvo:", newDevice);
+            resetForm();
+            closed();
         } catch (error) {
-            console.log("Erro ao salvar o device", error);
+            console.log("Erro ao salvar o device manual", error);
             Alert.alert('Erro', 'Ocorreu um erro ao salvar o dispositivo.');
         }
     };
 
-    // Controle dos Checkboxes
+    const handleSaveMultipleDevices = async (devicesArray) => {
+        if (!devicesArray || devicesArray.length === 0) {
+            Alert.alert('Nenhum Dispositivo', 'Nenhum sub-dispositivo foi configurado para salvar.');
+            return;
+        }
+        console.log("[ModalDevice] Tentando salvar múltiplos devices:", devicesArray);
+        try {
+            const existingDevices = await loadDevices();
+            const updatedDevices = [...existingDevices, ...devicesArray];
+            await AsyncStorage.setItem('Device1', JSON.stringify(updatedDevices));
+            console.log(`[ModalDevice] ${devicesArray.length} sub-dispositivo(s) salvo(s) com sucesso.`);
+            resetForm();
+            closed();
+        } catch (error) {
+            console.log("[ModalDevice] Erro ao salvar múltiplos devices", error);
+            Alert.alert('Erro', 'Ocorreu um erro ao salvar os sub-dispositivos.');
+        }
+    };
+
+    const resetForm = () => {
+        console.log("[ModalDevice] Resetando formulário e estados...");
+        setValueName('');
+        setValueIP('');
+        setValueComando('?m=1&o=1');
+        setSelectedIcon(icons.find(icon => icon.name === 'Lâmpada') || icons[0]);
+        setCheckedButton(true);
+        setCheckedSlide(false);
+        setSearchViewVisible(false);
+        setSubDeviceModalVisible(false);
+        setConfiguringIp(null);
+        setFoundDevices([]); // Limpa a lista de encontrados também
+        setIsScanning(false);
+        setScanProgress(0);
+        setScanError(null);
+    };
+
     const handleCheckboxChange = (type) => {
         if (type === 'button') {
             setCheckedButton(true);
@@ -151,51 +171,39 @@ export default function ModalDevice({ status, group, closed, ...rest }) {
         }
     };
 
-    // --- Funções do Scanner Tasmota --- 
-
-    // Verifica um IP
     const checkDevice = useCallback(async (ip) => {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 1500); // Timeout de 1.5s
+        const timeoutId = setTimeout(() => controller.abort(), 1500);
         try {
-            // Usa http por padrão para Tasmota
             const response = await fetch(`http://${ip}/`, {
                 method: 'GET',
                 signal: controller.signal,
-                headers: {
-                    // Alguns fetches podem precisar de cabeçalhos padrão
-                    'Accept': 'application/json, text/plain, */*'
-                }
+                headers: { 'Accept': 'application/json, text/plain, */*' }
             });
             clearTimeout(timeoutId);
             const serverHeader = response.headers.get('server');
-            // Verifica se o cabeçalho existe e inclui 'tasmota' (case-insensitive)
             if (serverHeader && serverHeader.toLowerCase().includes('tasmota')) {
                 return ip;
             }
         } catch (e) {
             clearTimeout(timeoutId);
-            // Ignora erros esperados (timeout, conexão recusada, etc.)
             if (e.name !== 'AbortError' && !e.message.includes('Network request failed')) {
-                 console.log(`Erro não esperado ao verificar ${ip}: ${e.name} - ${e.message}`);
+                 console.log(`[ModalDevice] Erro não esperado ao verificar ${ip}: ${e.name} - ${e.message}`);
             }
         }
         return null;
     }, []);
 
-    // Executa a varredura completa
     const runFullScan = useCallback(async (prefix) => {
         if (!prefix || isScanning) return;
-
+        console.log("[ModalDevice] Iniciando runFullScan com prefixo:", prefix);
         setIsScanning(true);
         setFoundDevices([]);
         setScanError(null);
         setScanProgress(0);
-
         const promises = [];
         const totalHosts = 254;
         let foundCount = 0;
-        console.log(`Iniciando varredura Tasmota na faixa: ${prefix}1 - ${prefix}${totalHosts}`);
 
         for (let i = 1; i <= totalHosts; i++) {
             const currentIp = `${prefix}${i}`;
@@ -203,12 +211,10 @@ export default function ModalDevice({ status, group, closed, ...rest }) {
                 checkDevice(currentIp).then(foundIp => {
                     if (foundIp) {
                         foundCount++;
-                        console.log(`(${foundCount}) Dispositivo Tasmota encontrado: ${foundIp}`);
-                        // Atualiza estado de forma segura e ordenada
+                        // console.log(`(${foundCount}) Dispositivo Tasmota encontrado: ${foundIp}`); // Log menos verboso
                         setFoundDevices(prevDevices => {
                             if (!prevDevices.includes(foundIp)) {
                                 const newDevices = [...prevDevices, foundIp];
-                                // Ordena numericamente pelo último octeto
                                 newDevices.sort((a, b) => {
                                     const numA = parseInt(a.split('.').pop());
                                     const numB = parseInt(b.split('.').pop());
@@ -219,111 +225,103 @@ export default function ModalDevice({ status, group, closed, ...rest }) {
                             return prevDevices;
                         });
                     }
-                    // Atualiza progresso após cada tentativa
                     setScanProgress(prev => prev + (1 / totalHosts));
                     return foundIp;
                 })
             );
 
-            // Controla a concorrência para não sobrecarregar
-            if (promises.length >= 20 || i === totalHosts) { // Processa em lotes de 20
+            if (promises.length >= 20 || i === totalHosts) {
                 await Promise.all(promises);
-                promises.length = 0; // Limpa o array de promessas
-                // Pequena pausa para liberar a thread principal
+                promises.length = 0;
                 await new Promise(resolve => setTimeout(resolve, 50));
             }
         }
-
-        // Garante que qualquer promessa restante seja resolvida
         if (promises.length > 0) {
              await Promise.all(promises);
         }
-
-        console.log('Varredura Tasmota concluída.');
+        console.log('[ModalDevice] Varredura Tasmota concluída.');
         setIsScanning(false);
-        // Garante que o progresso chegue a 100% no final
         setScanProgress(1);
+    }, [isScanning, checkDevice]);
 
-    }, [isScanning, checkDevice]); // checkDevice é dependência do useCallback
-
-    // Botão "Buscar IP"
     const handleSearchClick = useCallback(async () => {
-        setSearchViewVisible(true); // Mostra a UI de busca
+        console.log("[ModalDevice] Botão Buscar Tasmota clicado.");
+        setSearchViewVisible(true);
         setIsScanning(false);
         setFoundDevices([]);
         setScanProgress(0);
         setScanError(null);
         setLocalIp(null);
         setNetworkPrefix(null);
-
         try {
-            console.log("Obtendo IP local...");
+            console.log("[ModalDevice] Obtendo IP local...");
             const ip = await Network.getIpAddressAsync();
+            console.log("[ModalDevice] IP Local obtido:", ip);
             setLocalIp(ip);
             const ipParts = ip.split('.');
             if (ipParts.length === 4) {
                 const prefix = `${ipParts[0]}.${ipParts[1]}.${ipParts[2]}.`;
                 setNetworkPrefix(prefix);
-                console.log(`Prefixo de rede determinado: ${prefix}`);
-                // Inicia a varredura
+                console.log(`[ModalDevice] Prefixo de rede determinado: ${prefix}`);
                 runFullScan(prefix);
             } else {
+                console.error("[ModalDevice] IP Local inválido:", ip);
                 setScanError('Não foi possível determinar o prefixo da rede a partir do IP: ' + ip);
-                // Não fecha a view de busca, permite ao usuário voltar manualmente
             }
         } catch (e) {
-            console.error('Erro ao obter IP ou iniciar varredura:', e);
+            console.error('[ModalDevice] Erro ao obter IP ou iniciar varredura:', e);
             setScanError('Falha ao obter o endereço IP local para iniciar a varredura.');
-             // Não fecha a view de busca, permite ao usuário voltar manualmente
         }
-    }, [runFullScan]); // runFullScan é dependência
+    }, [runFullScan]);
 
-    // Seleciona um IP da lista de encontrados
+    // **MODIFICADO COM LOGS: Seleciona um IP da lista e ABRE O NOVO MODAL**
     const handleSelectFoundIP = (ip) => {
-        setValueIP(ip);
-        setSearchViewVisible(false); // Volta para o formulário
+        console.log(`[ModalDevice] handleSelectFoundIP chamado com IP: ${ip}`);
+        console.log('[ModalDevice] Definindo configuringIp...');
+        setConfiguringIp(ip);
+        console.log('[ModalDevice] Definindo subDeviceModalVisible para true...');
+        setSubDeviceModalVisible(true);
+        console.log('[ModalDevice] Definindo searchViewVisible para false...');
+        setSearchViewVisible(false);
+        console.log('[ModalDevice] handleSelectFoundIP concluído.');
     };
 
-    // Fecha a view de busca
     const closeSearchView = () => {
-        // TODO: Adicionar lógica para cancelar a varredura se estiver em andamento (se necessário)
-        setIsScanning(false); // Para o indicador de progresso visualmente
+        console.log("[ModalDevice] Fechando Search View...");
+        setIsScanning(false);
         setSearchViewVisible(false);
     };
 
     // --- Renderização --- 
+    console.log(`[ModalDevice] Renderizando... searchViewVisible: ${searchViewVisible}, subDeviceModalVisible: ${subDeviceModalVisible}, configuringIp: ${configuringIp}`);
 
     return (
         <Modal
             animationType='slide'
             transparent={true}
             statusBarTranslucent={true}
-            visible={status} // Controla visibilidade do Modal principal
-            onRequestClose={closed} // Permite fechar com botão voltar (Android)
+            visible={status}
+            onRequestClose={closed}
         >
             <View style={styles.outerView}>
-                {/* Container principal do conteúdo do modal */}
                 <View style={styles.modalContainer}>
-
-                    {/* Cabeçalho Fixo */}
                     <View style={styles.modalHeader}>
                         <Text style={styles.modalTitle}>
                             {searchViewVisible ? 'Buscar Dispositivos Tasmota' : 'Adicionar Novo Dispositivo'}
                         </Text>
                     </View>
 
-                    {/* Conteúdo Condicional: Formulário ou Busca */}
                     {!searchViewVisible ? (
-                        // --- Formulário --- 
+                        // --- Formulário Manual --- 
                         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.formScrollView}>
-                            <Text style={styles.label}>Nome do Dispositivo</Text>
+                            {/* ... (campos do formulário manual mantidos) ... */}
+                             <Text style={styles.label}>Nome do Dispositivo</Text>
                             <TextInput
                                 style={styles.inputText}
-                                placeholder='Ex: Luz Cozinha'
+                                placeholder='Ex: Luz Cozinha (Manual)'
                                 value={valueName}
                                 onChangeText={setValueName}
                             />
-
                             <Text style={styles.label}>Ícone</Text>
                             <TouchableOpacity
                                 style={[styles.inputText, styles.iconPickerButton]}
@@ -332,7 +330,6 @@ export default function ModalDevice({ status, group, closed, ...rest }) {
                                 <Text style={styles.iconPickerText}>Escolher Ícone</Text>
                                 {selectedIcon?.image && <Image source={selectedIcon.image} style={styles.selectedIconImage} />}
                             </TouchableOpacity>
-
                             <Text style={styles.label}>Endereço IP</Text>
                             <TextInput
                                 style={styles.inputText}
@@ -343,17 +340,15 @@ export default function ModalDevice({ status, group, closed, ...rest }) {
                                 autoCapitalize="none"
                                 autoCorrect={false}
                             />
-
                             <Text style={styles.label}>Comando Tasmota</Text>
                             <TextInput
                                 style={styles.inputText}
-                                placeholder='Ex: Power' // Ou Power1, Dimmer, etc.
+                                placeholder='Ex: Power (ou Power1, Dimmer)'
                                 value={valueComando}
                                 onChangeText={setValueComando}
                                 autoCapitalize="none"
                                 autoCorrect={false}
                             />
-
                             <Text style={styles.label}>Tipo de Controle</Text>
                             <View style={styles.checkboxContainer}>
                                 <TouchableOpacity style={styles.checkboxOption} onPress={() => handleCheckboxChange('button')}>
@@ -365,14 +360,12 @@ export default function ModalDevice({ status, group, closed, ...rest }) {
                                     <Text style={styles.checkboxLabel}>Slider (Dimmer)</Text>
                                 </TouchableOpacity>
                             </View>
-
-                            {/* Botões de Ação do Formulário */}
                             <View style={styles.actionButtonsContainer}>
                                 <TouchableOpacity onPress={saveDevice} style={[styles.buttonBase, styles.saveButton]}>
-                                    <Text style={styles.buttonText}>Salvar</Text>
+                                    <Text style={styles.buttonText}>Salvar Manual</Text>
                                 </TouchableOpacity>
                                 <TouchableOpacity onPress={handleSearchClick} style={[styles.buttonBase, styles.searchButton]}>
-                                    <Text style={styles.buttonText}>Buscar IP</Text>
+                                    <Text style={styles.buttonText}>Buscar Tasmota</Text>
                                 </TouchableOpacity>
                                 <TouchableOpacity onPress={closed} style={[styles.buttonBase, styles.closeButton]}>
                                     <Text style={styles.buttonText}>Cancelar</Text>
@@ -380,63 +373,61 @@ export default function ModalDevice({ status, group, closed, ...rest }) {
                             </View>
                         </ScrollView>
                     ) : (
-                        // --- View de Busca --- 
-                        <View style={styles.searchContainer}>
-                            {localIp && <Text style={styles.searchInfo}>Seu IP: {localIp}</Text>}
-                            {networkPrefix && <Text style={styles.searchInfo}>Buscando em: {networkPrefix}1 - 254</Text>}
-                            
+                        // --- View de Busca Tasmota --- 
+                        <View style={styles.searchViewContainer}>
                             {isScanning && (
                                 <View style={styles.progressContainer}>
-                                    <ActivityIndicator size="large" color="#007AFF" />
-                                    <Text style={styles.progressText}>Buscando... {Math.round(scanProgress * 100)}%</Text>
+                                    <Text style={styles.progressText}>
+                                        Buscando... {Math.round(scanProgress * 100)}%
+                                    </Text>
+                                    <View style={styles.progressBarBackground}>
+                                        <View style={[styles.progressBarForeground, { width: `${Math.round(scanProgress * 100)}%` }]} />
+                                    </View>
                                 </View>
                             )}
-
                             {scanError && <Text style={styles.errorText}>{scanError}</Text>}
-
-                            <Text style={styles.foundDevicesTitle}>Dispositivos Encontrados:</Text>
-                            {foundDevices.length === 0 && !isScanning && (
-                                <Text style={styles.noDevicesText}>Nenhum dispositivo Tasmota encontrado na rede.</Text>
+                            {foundDevices.length > 0 ? (
+                                <FlatList
+                                    data={foundDevices}
+                                    keyExtractor={(item) => item}
+                                    renderItem={({ item }) => (
+                                        <TouchableOpacity
+                                            style={styles.foundDeviceItem}
+                                            onPress={() => {
+                                                console.log(`[ModalDevice] TouchableOpacity para IP ${item} pressionado.`); // Log no onPress
+                                                handleSelectFoundIP(item);
+                                            }}
+                                        >
+                                            <Text style={styles.foundDeviceText}>{item}</Text>
+                                        </TouchableOpacity>
+                                    )}
+                                    ListHeaderComponent={<Text style={styles.foundListHeader}>Dispositivos Tasmota Encontrados:</Text>}
+                                />
+                            ) : (
+                                !isScanning && <Text style={styles.noDevicesText}>Nenhum dispositivo Tasmota encontrado.</Text>
                             )}
-                            <FlatList
-                                data={foundDevices}
-                                keyExtractor={(item) => item}
-                                renderItem={({ item }) => (
-                                    <TouchableOpacity onPress={() => handleSelectFoundIP(item)} style={styles.foundDeviceItem}>
-                                        <Text style={styles.foundDeviceText}>{item}</Text>
- 
-                                    </TouchableOpacity>
-                                )}
-                                style={styles.foundDevicesList}
-                                ListEmptyComponent={() => (
-                                    // Mostra apenas se não estiver buscando e a lista estiver vazia
-                                    !isScanning && foundDevices.length === 0 ? (
-                                        <Text style={styles.noDevicesText}>Nenhum dispositivo Tasmota encontrado.</Text>
-                                    ) : null
-                                )}
-                            />
-                           
-                            <TouchableOpacity onPress={closeSearchView} style={[styles.buttonBase, styles.closeSearchButton]}>
-                                <Text style={styles.buttonText}>Voltar ao Cadastro</Text>
+                            <TouchableOpacity onPress={closeSearchView} style={[styles.buttonBaseVoltar, styles.closeButton, { marginTop: hp(2) }]}>
+                                <Text style={styles.buttonText}>Voltar</Text>
                             </TouchableOpacity>
                         </View>
                     )}
                 </View>
             </View>
 
-            {/* --- Modal de Seleção de Ícones --- */}
+            {/* --- Modal de Seleção de Ícones (para o formulário manual) --- */}
             <Modal
                 animationType="fade"
                 transparent={true}
                 visible={iconModalVisible}
                 onRequestClose={() => setIconModalVisible(false)}
             >
-                <TouchableOpacity
+                 {/* ... (conteúdo do modal de ícones mantido) ... */}
+                 <TouchableOpacity
                     style={styles.iconModalOverlay}
-                    onPress={() => setIconModalVisible(false)} // Fecha ao clicar fora
+                    onPress={() => setIconModalVisible(false)}
                     activeOpacity={1}
                 >
-                    <View style={styles.iconModalContent} onStartShouldSetResponder={() => true} /* Evita fechar ao clicar dentro */>
+                    <View style={styles.iconModalContent} onStartShouldSetResponder={() => true}>
                         <Text style={styles.iconModalTitle}>Selecione um Ícone</Text>
                         <FlatList
                             data={icons}
@@ -447,22 +438,37 @@ export default function ModalDevice({ status, group, closed, ...rest }) {
                                     <Text style={styles.iconText}>{item.name}</Text>
                                 </TouchableOpacity>
                             )}
-                            numColumns={3} // 3 colunas de ícones
+                            numColumns={3}
                             contentContainerStyle={styles.iconListContainer}
                         />
-                         <TouchableOpacity onPress={() => setIconModalVisible(false)} style={[styles.buttonBase, styles.closeButton, { alignSelf: 'center', marginTop: 15 }]}>
+                        <TouchableOpacity onPress={() => setIconModalVisible(false)} style={[styles.buttonBase, styles.closeButton, { alignSelf: 'center', marginTop: 15 }]}>
                             <Text style={styles.buttonText}>Fechar</Text>
                         </TouchableOpacity>
                     </View>
                 </TouchableOpacity>
             </Modal>
+
+            {/* --- **NOVO**: Renderiza o Modal de Configuração de Sub-Devices --- */}
+            {/* Adicionado log para verificar se este componente está sendo montado */}
+            {subDeviceModalVisible && console.log("[ModalDevice] Tentando renderizar TasmotaSubDeviceConfigModal...")}
+            <TasmotaSubDeviceConfigModal
+                visible={subDeviceModalVisible}
+                onClose={() => {
+                    console.log("[ModalDevice] Fechando TasmotaSubDeviceConfigModal...");
+                    setSubDeviceModalVisible(false);
+                    setConfiguringIp(null); // Limpa o IP em configuração
+                }}
+                selectedIp={configuringIp}
+                icons={icons}
+                group={group}
+                onSaveMultipleDevices={handleSaveMultipleDevices}
+            />
         </Modal>
     );
 }
 
-// --- Estilos --- (Refatorados e Organizados)
+// --- Estilos --- (Mantidos como no arquivo anterior)
 const styles = StyleSheet.create({
-    // Estilos Gerais do Modal Principal
     outerView: {
         flex: 1,
         alignItems: 'center',
@@ -471,7 +477,7 @@ const styles = StyleSheet.create({
     },
     modalContainer: {
         width: '90%',
-        maxHeight: '90%', // Aumentado um pouco a altura máxima
+        maxHeight: '90%',
         backgroundColor: 'white',
         borderRadius: 15,
         overflow: 'hidden',
@@ -487,6 +493,7 @@ const styles = StyleSheet.create({
         borderBottomWidth: 1,
         borderBottomColor: '#eee',
         backgroundColor: '#f8f8f8',
+        alignItems: 'center',
     },
     modalTitle: {
         fontWeight: 'bold',
@@ -494,12 +501,11 @@ const styles = StyleSheet.create({
         color: '#333',
         textAlign: 'center',
     },
-    // Estilos do Formulário
     formScrollView: {
         padding: wp(4),
     },
     label: {
-        fontWeight: '600', // Semi-bold
+        fontWeight: '600',
         color: '#444',
         marginBottom: hp(0.8),
         fontSize: wp(4),
@@ -532,7 +538,7 @@ const styles = StyleSheet.create({
     },
     checkboxContainer: {
         flexDirection: 'row',
-        marginBottom: hp(2.5),
+        marginBottom: hp(1.5),
         marginTop: hp(1),
     },
     checkboxOption: {
@@ -547,9 +553,12 @@ const styles = StyleSheet.create({
     },
     actionButtonsContainer: {
         flexDirection: 'row',
-        justifyContent: 'space-between', // Espaço entre botões
-        marginTop: hp(2),
-        marginBottom: hp(1),
+        justifyContent: 'space-around',
+        paddingVertical: hp(1.5),
+        paddingHorizontal: wp(4),
+        borderTopWidth: 1,
+        borderTopColor: '#eee',
+        backgroundColor: '#f8f8f8',
     },
     buttonBase: {
         paddingVertical: hp(1.5),
@@ -557,7 +566,16 @@ const styles = StyleSheet.create({
         borderRadius: 8,
         alignItems: 'center',
         justifyContent: 'center',
-        marginHorizontal: wp(1), // Espaço entre botões
+        flex: 1,
+        marginHorizontal: wp(1.5),
+    },
+    buttonBaseVoltar: {
+        paddingVertical: hp(1.5),
+        paddingHorizontal: wp(3),
+        borderRadius: 8,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginHorizontal: wp(1.5),
     },
     buttonText: {
         color: 'white',
@@ -566,81 +584,69 @@ const styles = StyleSheet.create({
         textAlign: 'center',
     },
     saveButton: {
-        backgroundColor: '#4CAF50', // Verde
+        backgroundColor: '#4CAF50',
     },
     searchButton: {
-        backgroundColor: '#2196F3', // Azul
+        backgroundColor: '#007AFF',
     },
     closeButton: {
-        backgroundColor: '#f44336', // Vermelho
+        backgroundColor: '#f44336',
     },
     // Estilos da View de Busca
-    searchContainer: {
-        margin:10,
-        justifyContent:'center',
-        alignItems: 'center'
-    },
-    searchInfo: {
-        fontSize: wp(3.8),
-        color: '#666',
-        marginBottom: hp(1),
-        textAlign: 'center',
+    searchViewContainer: {
+        padding: wp(4),
+        // flex: 1, // Removido para evitar problemas de layout com FlatList
+        minHeight: hp(50), // Altura mínima para a área de busca
     },
     progressContainer: {
-        flexDirection: 'row',
+        marginBottom: hp(2),
         alignItems: 'center',
-        marginVertical: hp(2.5),
     },
     progressText: {
-        marginLeft: wp(4),
         fontSize: wp(4),
-        color: '#333',
+        color: '#555',
+        marginBottom: hp(1),
+    },
+    progressBarBackground: {
+        height: hp(1.5),
+        width: '100%',
+        backgroundColor: '#e0e0e0',
+        borderRadius: hp(0.75),
+        overflow: 'hidden',
+    },
+    progressBarForeground: {
+        height: '100%',
+        backgroundColor: '#007AFF',
+        borderRadius: hp(0.75),
     },
     errorText: {
         color: 'red',
-        marginVertical: hp(1.5),
         textAlign: 'center',
-        fontSize: wp(3.8),
-        paddingHorizontal: wp(2),
+        fontSize: wp(4),
+        marginBottom: hp(2),
     },
-    foundDevicesTitle: {
+    foundListHeader: {
         fontSize: wp(4.5),
         fontWeight: 'bold',
+        marginBottom: hp(1.5),
         color: '#333',
-        marginTop: hp(2),
-        marginBottom: hp(1.5),
-    },
-    foundDevicesList: {
-        width: '100%',
-     
-        marginBottom: hp(1.5),
     },
     foundDeviceItem: {
+        backgroundColor: '#f0f0f0',
         paddingVertical: hp(1.5),
         paddingHorizontal: wp(3),
-        borderBottomWidth: 1,
-        borderBottomColor: '#eee',
-        backgroundColor: '#f9f9f9',
         borderRadius: 5,
-        marginBottom: hp(0.8),
+        marginBottom: hp(1),
     },
     foundDeviceText: {
         fontSize: wp(4),
-        textAlign: 'center',
-        color: '#007AFF'
+        color: '#007AFF',
     },
     noDevicesText: {
         fontSize: wp(4),
         color: '#888',
-        marginTop: hp(3),
         textAlign: 'center',
-        fontStyle: 'italic',
-    },
-    closeSearchButton: {
-        backgroundColor: '#ff9800', // Laranja
-        width: '80%', // Botão mais largo
-        alignSelf: 'center',
-        marginTop: hp(1.5),
+        marginTop: hp(3),
     },
     // Estilos do Modal de Ícones
     iconModalOverlay: {
@@ -672,7 +678,7 @@ const styles = StyleSheet.create({
     iconItemContainer: {
         padding: wp(2),
         alignItems: 'center',
-        width: wp(28), // Largura para 3 colunas
+        width: wp(28),
         marginBottom: hp(1.5),
     },
     iconImage: {
