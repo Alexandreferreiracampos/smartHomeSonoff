@@ -1,19 +1,22 @@
 import { Text, StyleSheet, TouchableOpacity, View, Image, ToastAndroid } from 'react-native'
-import Slider from '@react-native-community/slider';
+import { Slider } from 'react-native-elements';
 import { useEffect, useState } from 'react';
 
 export default function Button({ title, slider, ico, width, height, sliderStatus, ip, ...rest }) {
 
+    const [rgb, SetRgb] = useState(0);
     const [brilho, SetBrilho] = useState(0);
+    const [white, SetWhite] = useState(0);
     const [corPoint, setCorPoint] = useState("black")
     const ipDivece = ip;
+    const [value, setValue] = useState(50);
 
     const commandRGB = (value) => {
 
         setCorPoint(hueToRGBString(value))
         try {
             if (value !== brilho) {
-                SetBrilho(value);
+                SetRgb(value);
                 let url = `http://${ipDivece}/${'?m=1&h0=' + value}`;
                 let req = new XMLHttpRequest();
 
@@ -51,7 +54,7 @@ export default function Button({ title, slider, ico, width, height, sliderStatus
     const commandWhite = (value) => {
         try {
             if (value !== brilho) {
-                SetBrilho(value);
+                SetWhite(value);
                 let url = `http://${ipDivece}/${'?m=1&n0=' + value}`;
                 let req = new XMLHttpRequest();
 
@@ -110,7 +113,7 @@ export default function Button({ title, slider, ico, width, height, sliderStatus
                 :
                 <View style={{ width: !sliderStatus ? width : 50, height: !sliderStatus ? height : 26 }}>
 
-                    <Text numberOfLines={1} allowFontScaling={false} style={[styles.text, {color:corPoint}]}>
+                    <Text numberOfLines={1} allowFontScaling={false} style={[styles.text]}>
                         {title}
                     </Text>
 
@@ -124,30 +127,33 @@ export default function Button({ title, slider, ico, width, height, sliderStatus
                     <View style={{ width: "100%", height: 29 }}>
 
                         <Slider
+                            value={rgb}
+                            onValueChange={(valor) => commandRGB(Number(valor.toFixed()))}
                             minimumValue={0}
                             maximumValue={359}
                             minimumTrackTintColor={corPoint}
-                            maximumTrackTintColor={corPoint}
-                            thumbTintColor='White'
-                            //onSlidingStart={RGB1(corRgb)}
-                            onValueChange={(valor) => commandRGB(valor.toFixed())}
-                            value={brilho}
+                            maximumTrackTintColor='#cdcdcd'
+                            thumbTintColor={corPoint}
+                            step={1}
+                            thumbStyle={{ height: 20, width: 20 }}
+                            trackStyle={{ height: 5 }}
                         />
-
 
                     </View>
 
                     <View style={{ width: "100%", height: 29 }}>
 
                         <Slider
+                            value={brilho}
+                            onValueChange={(valor) => commandBrilho(Number(valor.toFixed()))}
                             minimumValue={0}
                             maximumValue={100}
                             minimumTrackTintColor='rgb(238, 233, 238)'
                             maximumTrackTintColor='#cdcdcd'
                             thumbTintColor='rgb(47,93,180)'
-                            //onSlidingStart={RGB1(corRgb)}
-                            onValueChange={(valor) => commandBrilho(valor.toFixed())}
-                            value={brilho}
+                            step={1}
+                            thumbStyle={{ height: 20, width: 20 }}
+                            trackStyle={{ height: 5 }}
                         />
 
 
@@ -155,16 +161,17 @@ export default function Button({ title, slider, ico, width, height, sliderStatus
                     <View style={{ width: "100%", height: 29 }}>
 
                         <Slider
+                            value={white}
+                            onValueChange={(valor) => commandWhite(Number(valor.toFixed()))}
                             minimumValue={0}
                             maximumValue={100}
                             minimumTrackTintColor='rgb(238, 233, 238)'
                             maximumTrackTintColor='#cdcdcd'
                             thumbTintColor='rgb(47,93,180)'
-                            //onSlidingStart={RGB1(corRgb)}
-                            onValueChange={(valor) => commandWhite(valor.toFixed())}
-                            value={brilho}
+                            step={1}
+                            thumbStyle={{ height: 20, width: 20 }}
+                            trackStyle={{ height: 5 }}
                         />
-
 
                     </View>
 
